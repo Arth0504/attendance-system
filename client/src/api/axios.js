@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// Dev:  VITE_API_URL not set → Vite proxy forwards /api → localhost:5000
-// Prod: VITE_API_URL = https://attendance-system-acb5.onrender.com
+// 👉 Production + Dev compatible BASE URL
 const BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
@@ -9,27 +8,32 @@ const BASE = import.meta.env.VITE_API_URL
 console.log('[axios] baseURL:', BASE);
 
 const api = axios.create({
-  baseURL:         BASE,
+  baseURL: BASE,
   withCredentials: true,
 });
 
+// 🔐 Attach token automatically
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
+// ⚠️ Handle auth errors cleanly
 api.interceptors.response.use(
   res => res,
   err => {
     const url = err.config?.url || '';
-    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/me');
+    const isAuthRoute =
+      url.includes('/auth/login') || url.includes('/auth/me');
 
     if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
-      // Dispatch a custom event — AuthContext listens and calls React Router navigate.
-      // Never use window.location.href here: it bypasses Vercel's SPA rewrite
-      // and causes a hard 404 on the CDN before index.html is served.
+
+      // 🔥 IMPORTANT: do NOT use window.location.href
+      // React Router handle karega redirect
       window.dispatchEvent(new Event('auth:logout'));
     }
 
