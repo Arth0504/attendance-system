@@ -1,3 +1,0 @@
-{
-  "_comment": "Frontend is served by Express on Render — Vercel deployment not used in unified mode. Delete this file if deploying frontend separately to Vercel and set VITE_API_URL in axios.js."
-}
