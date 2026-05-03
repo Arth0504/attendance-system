@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Dev:  VITE_API_URL is not set → Vite proxy forwards /api → localhost:5000
+// Dev:  VITE_API_URL not set → Vite proxy forwards /api → localhost:5000
 // Prod: VITE_API_URL = https://attendance-system-acb5.onrender.com
-//       baseURL becomes https://attendance-system-acb5.onrender.com/api
 const BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
@@ -25,10 +24,15 @@ api.interceptors.response.use(
   err => {
     const url = err.config?.url || '';
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/me');
+
     if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Dispatch a custom event — AuthContext listens and calls React Router navigate.
+      // Never use window.location.href here: it bypasses Vercel's SPA rewrite
+      // and causes a hard 404 on the CDN before index.html is served.
+      window.dispatchEvent(new Event('auth:logout'));
     }
+
     return Promise.reject(err);
   }
 );
