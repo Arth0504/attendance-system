@@ -1,42 +1,37 @@
 import axios from 'axios';
 
-// 👉 Production + Dev compatible BASE URL
-const BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+// Hardcoded Render backend URL — works in all environments without
+// relying on VITE_API_URL being resolved correctly at build time.
+// Dev proxy in vite.config.js is still used for local development
+// because import.meta.env.DEV is true and Vite rewrites /api calls.
+const RENDER_URL = 'https://attendance-system-acb5.onrender.com';
 
-console.log('[axios] baseURL:', BASE);
+const BASE = import.meta.env.DEV
+  ? '/api'                    // dev: Vite proxy → localhost:5000
+  : `${RENDER_URL}/api`;      // prod: direct to Render
+
+console.log('[axios] mode:', import.meta.env.MODE, '| baseURL:', BASE);
 
 const api = axios.create({
-  baseURL: BASE,
+  baseURL:         BASE,
   withCredentials: true,
 });
 
-// 🔐 Attach token automatically
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// ⚠️ Handle auth errors cleanly
 api.interceptors.response.use(
   res => res,
   err => {
     const url = err.config?.url || '';
-    const isAuthRoute =
-      url.includes('/auth/login') || url.includes('/auth/me');
-
+    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/me');
     if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
-
-      // 🔥 IMPORTANT: do NOT use window.location.href
-      // React Router handle karega redirect
       window.dispatchEvent(new Event('auth:logout'));
     }
-
     return Promise.reject(err);
   }
 );
