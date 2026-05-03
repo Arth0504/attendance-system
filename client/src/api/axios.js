@@ -1,19 +1,7 @@
 import axios from 'axios';
 
-// Hardcoded Render backend URL — works in all environments without
-// relying on VITE_API_URL being resolved correctly at build time.
-// Dev proxy in vite.config.js is still used for local development
-// because import.meta.env.DEV is true and Vite rewrites /api calls.
-const RENDER_URL = 'https://attendance-system-acb5.onrender.com';
-
-const BASE = import.meta.env.DEV
-  ? '/api'                    // dev: Vite proxy → localhost:5000
-  : `${RENDER_URL}/api`;      // prod: direct to Render
-
-console.log('[axios] mode:', import.meta.env.MODE, '| baseURL:', BASE);
-
 const api = axios.create({
-  baseURL:         BASE,
+  baseURL:         'https://attendance-system-acb5.onrender.com/api',
   withCredentials: true,
 });
 
