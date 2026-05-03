@@ -4,10 +4,12 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Dev only — proxies /api to local Express server
-    proxy: { '/api': 'http://localhost:5000' },
+    proxy: { '/api': 'http://localhost:5000' }, // dev only
   },
   build: {
     chunkSizeWarningLimit: 1024,
+    rollupOptions: {
+      output: { manualChunks: undefined },
+    },
   },
 });
