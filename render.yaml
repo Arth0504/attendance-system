@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: attendance-ms-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false          # set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: QR_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false          # set to your Vercel/Netlify URL
+    healthCheckPath: /health
