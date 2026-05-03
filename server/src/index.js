@@ -124,17 +124,22 @@ const connectDB = async () => {
     return;
   }
 
-  const isAtlas = process.env.MONGO_URI.includes('mongodb+srv');
+  const uri     = process.env.MONGO_URI;
+  const isAtlas = uri.includes('mongodb+srv');
+  // Log URI shape (never log the full URI — it contains the password)
+  const uriShape = uri.replace(/:([^@]+)@/, ':<password>@');
+  console.log(`[DB] URI shape : ${uriShape}`);
   console.log(`[DB] Connecting to ${isAtlas ? 'MongoDB Atlas' : 'local MongoDB'}...`);
 
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
     });
 
     const { host, name } = mongoose.connection;
     console.log(`[DB] ✓ Connected — host: ${host} | db: ${name}`);
+    console.log('[DB] MongoDB connected ✓');
 
     await require('./utils/seedAdmin')();
     console.log('[DB] ✓ Admin seeded');
