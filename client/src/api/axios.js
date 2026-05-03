@@ -1,12 +1,8 @@
 import axios from 'axios';
 
-// In dev: Vite proxies /api → localhost:5000 (no baseURL needed)
-// In prod: VITE_API_URL = https://your-render-backend.onrender.com
-const baseURL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
-
-const api = axios.create({ baseURL });
+// Unified deployment: frontend is served by Express on the same origin,
+// so /api always resolves correctly in both dev (Vite proxy) and production.
+const api = axios.create({ baseURL: '/api' });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
@@ -14,7 +10,6 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Only auto-redirect on 401 for authenticated routes, never for /auth/login or /auth/me
 api.interceptors.response.use(
   res => res,
   err => {
