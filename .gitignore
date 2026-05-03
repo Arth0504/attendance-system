@@ -11,7 +11,7 @@ node_modules/
 server/.env
 client/.env
 client/.env.local
-client/.env.production
+# client/.env.production is committed intentionally (public Render URL only)
 
 # ── Build output ──────────────────────────────────────────────────────────────
 dist/

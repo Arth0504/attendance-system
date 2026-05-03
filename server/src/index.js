@@ -50,13 +50,15 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.length === 0) return cb(null, true);
+    if (!origin) return cb(null, true);                      // curl / Render health monitor
+    if (allowedOrigins.length === 0) return cb(null, true);  // no list set → allow all
     if (allowedOrigins.includes(origin)) return cb(null, true);
+    console.warn('[CORS] Blocked origin:', origin);
     return cb(new Error(`CORS: "${origin}" not allowed`));
   },
   credentials: true,
 }));
+console.log('[STARTUP] CORS allowed origins:', allowedOrigins.length ? allowedOrigins.join(', ') : 'ALL (ALLOWED_ORIGINS not set)');
 
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
