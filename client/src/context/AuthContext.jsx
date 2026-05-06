@@ -11,7 +11,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (identifier, password) => {
     const { data } = await api.post('/auth/login', { identifier, password });
-    localStorage.setItem('user', JSON.stringify(data));
+    const userStr = JSON.stringify(data);
+    localStorage.setItem('user', userStr);
+    // Verify it was written before proceeding
+    const stored = localStorage.getItem('user');
+    if (!stored) throw new Error('Failed to persist session');
     setUser(data);
     return data;
   };
