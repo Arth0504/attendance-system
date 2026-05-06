@@ -64,8 +64,9 @@ const AdminDashboard = ({ activeTab }) => {
   const handleCreateFaculty = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/users/faculty', facultyForm);
-      toast.success('Faculty account created!');
+      const { data } = await api.post('/users/faculty', facultyForm);
+      const pwd = data._password_plain || facultyForm.password;
+      toast.success(`Faculty created! Login: ${data.email} / ${pwd}`);
       setFacultyForm({ name: '', email: '', password: '', department: '' });
       refreshUsers();
     } catch (err) {

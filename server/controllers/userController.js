@@ -21,12 +21,12 @@ const getAllUsers = async (req, res) => {
 
 const createFaculty = async (req, res) => {
   try {
-    const { name, email, department, subject } = req.body;
+    const { name, email, department, subject, password: reqPassword } = req.body;
     if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
     if (await User.findOne({ email })) return res.status(400).json({ message: 'Email already exists' });
-    const password = email.split('@')[0] + '@123';
+    const password = reqPassword?.trim() || email.split('@')[0] + '@123';
     const user = await User.create({ name, email, password, role: 'faculty', department: department || subject });
-    res.status(201).json({ ...user.toObject(), password, _password_plain: password });
+    res.status(201).json({ ...user.toObject(), _password_plain: password });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
