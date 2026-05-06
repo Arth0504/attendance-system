@@ -429,6 +429,12 @@ const AdminDashboard = ({ activeTab }) => {
                         {a.distanceFromCampus != null && <span className="mr-2">📍 {a.distanceFromCampus}m from campus</span>}
                         {new Date(a.timestamp).toLocaleString()}
                       </p>
+                      {a.approvalReason && (
+                        <div className="mt-2 p-2 bg-yellow-50 rounded-lg border border-yellow-100">
+                          <p className="text-xs font-semibold text-yellow-800">Reason: {a.approvalReason}</p>
+                          {a.approvalNote && <p className="text-xs text-yellow-700 mt-0.5">{a.approvalNote}</p>}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => handleApprove(a._id)}

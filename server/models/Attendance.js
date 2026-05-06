@@ -10,6 +10,8 @@ const attendanceSchema = new mongoose.Schema({
     longitude: { type: Number },
   },
   distanceFromCampus: { type: Number },
+  approvalReason: { type: String, default: '' },
+  approvalNote:   { type: String, default: '' },
   timestamp: { type: Date, default: Date.now },
 }, { timestamps: true });
 

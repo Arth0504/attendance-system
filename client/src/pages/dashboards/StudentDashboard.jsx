@@ -28,6 +28,117 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// Approval Request Modal
+const ApprovalModal = ({ data, onSubmit, onCancel }) => {
+  const [reason, setReason] = useState('');
+  const [note, setNote]     = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const reasons = [
+    'Internet/connectivity issue',
+    'Medical emergency',
+    'Transport delay',
+    'Family emergency',
+    'Working remotely',
+    'Other',
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason) { toast.error('Please select a reason'); return; }
+    setLoading(true);
+    await onSubmit({ reason, note });
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Outside Campus</h3>
+              <p className="text-xs text-gray-500">Send an approval request to your faculty</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info banner */}
+        <div className="mx-6 mt-4 p-3 bg-yellow-50 rounded-xl border border-yellow-100">
+          <p className="text-xs text-yellow-800 font-medium">
+            📍 You are <span className="font-bold">{data.distance}m</span> away from campus
+            ({data.subject} — {data.department})
+          </p>
+          <p className="text-xs text-yellow-700 mt-1">
+            Your attendance will be marked as <span className="font-semibold">Pending</span> until faculty approves.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Reason select */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {reasons.map(r => (
+                <button
+                  key={r} type="button"
+                  onClick={() => setReason(r)}
+                  className={`text-left px-3 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                    reason === r
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Optional note */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+              Additional Note <span className="text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={3}
+              placeholder="Add any additional context for your faculty..."
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none transition"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={loading || !reason}
+              className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Sending...' : 'Send Request'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const StudentDashboard = ({ activeTab }) => {
   const { user } = useAuth();
   const [records, setRecords]       = useState([]);
@@ -38,6 +149,8 @@ const StudentDashboard = ({ activeTab }) => {
   const [faceStatus, setFaceStatus] = useState('');
   const [faceImageUrl, setFaceImageUrl] = useState(null);
   const [scanning, setScanning]     = useState(false);
+  // Pending approval modal state
+  const [approvalModal, setApprovalModal] = useState(null); // { sessionId, qrToken, method, subject, department, distance }
   const videoRef   = useRef(null);
   const canvasRef  = useRef(null);
   const scannerRef = useRef(null);
@@ -56,12 +169,56 @@ const StudentDashboard = ({ activeTab }) => {
     );
   }, []);
 
+  // Helper: attempt to mark attendance; if outside campus, open modal instead
+  const attemptMark = async ({ sessionId, qrToken, method, subject, department }) => {
+    try {
+      const res = await api.post('/attendance/mark', {
+        sessionId, method, qrToken, location,
+      });
+      if (res.data.status === 'pending') {
+        // Show what happened but don't open modal — already submitted without reason
+        toast('Attendance pending faculty approval.', { icon: '⏳' });
+      } else {
+        toast.success(`Attendance marked for ${subject}!`);
+      }
+      refreshRecords();
+    } catch (err) {
+      const msg = err.response?.data?.message || '';
+      // If outside radius, backend returns 400 with distanceFromCampus hint — open modal
+      if (msg.includes('outside') || err.response?.data?.distanceFromCampus) {
+        setApprovalModal({
+          sessionId, qrToken, method, subject, department,
+          distance: err.response?.data?.distanceFromCampus || '?',
+        });
+      } else {
+        toast.error(msg || 'Failed to mark attendance');
+      }
+    }
+  };
+
+  // Submit approval request with reason/note
+  const handleApprovalSubmit = async ({ reason, note }) => {
+    if (!approvalModal) return;
+    try {
+      const res = await api.post('/attendance/mark', {
+        sessionId:      approvalModal.sessionId,
+        method:         approvalModal.method,
+        qrToken:        approvalModal.qrToken,
+        location,
+        approvalReason: reason,
+        approvalNote:   note,
+      });
+      setApprovalModal(null);
+      toast('Approval request sent. Pending faculty review.', { icon: '⏳' });
+      refreshRecords();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send request');
+    }
+  };
+
   // QR Scanner — uses rear camera
   useEffect(() => {
-    if (activeTab !== 'qr') {
-      stopQRScanner();
-      return;
-    }
+    if (activeTab !== 'qr') { stopQRScanner(); return; }
 
     const startScanner = async () => {
       const el = document.getElementById('qr-reader');
@@ -71,70 +228,37 @@ const StudentDashboard = ({ activeTab }) => {
       scannerRef.current = scanner;
       setScanning(true);
 
-      try {
-        await scanner.start(
-          { facingMode: { exact: 'environment' } },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          async (decodedText) => {
-            try {
-              await scanner.stop();
-              scannerRef.current = null;
-              setScanning(false);
-
-              const { token, subject } = JSON.parse(decodedText);
-              // Re-fetch active sessions at scan time for freshness
-              const { data: liveSessions } = await api.get('/sessions');
-              const active = liveSessions.filter(s => s.isActive);
-              const session = active.find(s => s.qrToken === token);
-
-              if (!session) {
-                toast.error('Session closed by faculty');
-                return;
-              }
-
-              const res = await api.post('/attendance/mark', {
-                sessionId: session._id, method: 'qr', qrToken: token, location,
-              });
-
-              if (res.data._message) {
-                toast(res.data._message, { icon: '⏳' });
-              } else {
-                toast.success(`Attendance marked for ${subject}!`);
-              }
-              refreshRecords();
-            } catch (err) {
-              toast.error(err.response?.data?.message || 'Failed to mark attendance');
-            }
-          },
-          () => {}
-        );
-      } catch {
-        // Rear camera not available, fall back to any camera
+      const onScan = async (decodedText) => {
         try {
-          await scanner.start(
-            { facingMode: 'user' },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            async (decodedText) => {
-              try {
-                await scanner.stop();
-                scannerRef.current = null;
-                setScanning(false);
-                const { token, subject } = JSON.parse(decodedText);
-                const { data: liveSessions } = await api.get('/sessions');
-                const session = liveSessions.filter(s => s.isActive).find(s => s.qrToken === token);
-                if (!session) { toast.error('Session closed by faculty'); return; }
-                const res = await api.post('/attendance/mark', {
-                  sessionId: session._id, method: 'qr', qrToken: token, location,
-                });
-                if (res.data._message) toast(res.data._message, { icon: '⏳' });
-                else toast.success(`Attendance marked for ${subject}!`);
-                refreshRecords();
-              } catch (err) {
-                toast.error(err.response?.data?.message || 'Failed to mark attendance');
-              }
-            },
-            () => {}
-          );
+          await scanner.stop();
+          scannerRef.current = null;
+          setScanning(false);
+
+          const { token, subject } = JSON.parse(decodedText);
+          const { data: liveSessions } = await api.get('/sessions');
+          const session = liveSessions.filter(s => s.isActive).find(s => s.qrToken === token);
+
+          if (!session) { toast.error('Session closed by faculty'); return; }
+
+          await attemptMark({
+            sessionId:  session._id,
+            qrToken:    token,
+            method:     'qr',
+            subject:    session.subject,
+            department: session.department,
+          });
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to mark attendance');
+        }
+      };
+
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      try {
+        await scanner.start({ facingMode: { exact: 'environment' } }, config, onScan, () => {});
+      } catch {
+        try {
+          await scanner.start({ facingMode: 'user' }, config, onScan, () => {});
         } catch {
           setScanning(false);
           toast.error('Camera access denied. Please allow camera permissions.');
@@ -143,10 +267,7 @@ const StudentDashboard = ({ activeTab }) => {
     };
 
     const timer = setTimeout(startScanner, 300);
-    return () => {
-      clearTimeout(timer);
-      stopQRScanner();
-    };
+    return () => { clearTimeout(timer); stopQRScanner(); };
   }, [activeTab]);
 
   const stopQRScanner = () => {
@@ -157,10 +278,7 @@ const StudentDashboard = ({ activeTab }) => {
     }
   };
 
-  // Stop camera when leaving face tab
-  useEffect(() => {
-    if (activeTab !== 'face') stopCamera();
-  }, [activeTab]);
+  useEffect(() => { if (activeTab !== 'face') stopCamera(); }, [activeTab]);
 
   const loadFaceModels = async () => {
     setFaceStatus('Loading face models...');
@@ -186,9 +304,7 @@ const StudentDashboard = ({ activeTab }) => {
         videoRef.current.srcObject = stream;
         setFaceStatus('Camera ready. Click "Capture & Mark" to mark attendance.');
       }
-    } catch {
-      setFaceStatus('Camera access denied.');
-    }
+    } catch { setFaceStatus('Camera access denied.'); }
   };
 
   const stopCamera = () => {
@@ -204,25 +320,22 @@ const StudentDashboard = ({ activeTab }) => {
     try {
       const detection = await faceapi
         .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+        .withFaceLandmarks().withFaceDescriptor();
       if (!detection) { setFaceStatus('No face detected. Please look at the camera.'); return; }
 
-      const descriptor = Array.from(detection.descriptor);
-      await api.put('/auth/face-descriptor', { descriptor });
+      await api.put('/auth/face-descriptor', { descriptor: Array.from(detection.descriptor) });
 
       if (sessions.length === 0) { setFaceStatus('No active sessions available.'); return; }
       const session = sessions[0];
-      const res = await api.post('/attendance/mark', { sessionId: session._id, method: 'face', location });
-      if (res.data._message) {
-        setFaceStatus(res.data._message);
-        toast(res.data._message, { icon: '⏳' });
-      } else {
-        toast.success(`Face attendance marked for ${session.subject}!`);
-        setFaceStatus('Attendance marked successfully!');
-      }
+
+      await attemptMark({
+        sessionId:  session._id,
+        method:     'face',
+        subject:    session.subject,
+        department: session.department,
+      });
+      setFaceStatus('Done.');
       stopCamera();
-      refreshRecords();
     } catch (err) {
       setFaceStatus(err.response?.data?.message || 'Face recognition failed.');
     }
@@ -236,6 +349,15 @@ const StudentDashboard = ({ activeTab }) => {
 
   return (
     <div className="max-w-5xl mx-auto">
+
+      {/* Approval Request Modal */}
+      {approvalModal && (
+        <ApprovalModal
+          data={approvalModal}
+          onSubmit={handleApprovalSubmit}
+          onCancel={() => setApprovalModal(null)}
+        />
+      )}
 
       {/* RECORDS TAB */}
       {activeTab === 'records' && (
@@ -271,7 +393,14 @@ const StudentDashboard = ({ activeTab }) => {
                     <tr key={r._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-800">{r.sessionId?.subject}</td>
                       <td className="px-4 py-3 text-gray-500">{r.sessionId?.department}</td>
-                      <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-0.5">
+                          <StatusBadge status={r.status} />
+                          {r.status === 'pending' && r.approvalReason && (
+                            <span className="text-xs text-gray-400 mt-0.5">Reason: {r.approvalReason}</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 capitalize text-gray-500">{r.method}</td>
                       <td className="px-4 py-3 text-gray-500">{new Date(r.timestamp).toLocaleString()}</td>
                     </tr>
@@ -374,7 +503,7 @@ const StudentDashboard = ({ activeTab }) => {
                   <p className="font-semibold text-gray-800 truncate mb-2">{s._id}</p>
                   <div className="flex justify-between text-sm text-gray-500 mb-2">
                     <span>{s.present} / {s.total} classes</span>
-                    <span className={`font-bold ${s.total ? Math.round((s.present/s.total)*100) >= 75 ? 'text-green-600' : 'text-red-500' : 'text-gray-400'}`}>
+                    <span className={`font-bold ${s.total && Math.round((s.present/s.total)*100) >= 75 ? 'text-green-600' : 'text-red-500'}`}>
                       {s.total ? Math.round((s.present / s.total) * 100) : 0}%
                     </span>
                   </div>

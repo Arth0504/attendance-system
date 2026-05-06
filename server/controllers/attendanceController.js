@@ -4,7 +4,7 @@ const Session    = require('../models/Session');
 
 const markAttendance = async (req, res) => {
   try {
-    const { sessionId, method, location, qrToken } = req.body;
+    const { sessionId, method, location, qrToken, approvalReason, approvalNote } = req.body;
     const session = await Session.findById(sessionId);
     if (!session)          return res.status(404).json({ message: 'Session not found' });
     if (!session.isActive) return res.status(400).json({ message: 'Session closed by faculty' });
@@ -15,28 +15,36 @@ const markAttendance = async (req, res) => {
     const existing = await Attendance.findOne({ userId: req.user._id, sessionId });
     if (existing) return res.status(400).json({ message: 'Attendance already marked' });
 
-    let status = 'present';
     let distanceFromCampus = null;
 
     if (session.location?.latitude && location?.latitude) {
       const dist = getDistance(session.location, location);
       distanceFromCampus = Math.round(dist);
       if (dist > session.location.radius) {
-        status = 'pending';
+        // If student provided a reason, store as pending (second call from modal)
+        if (approvalReason) {
+          const attendance = await Attendance.create({
+            userId: req.user._id, sessionId, method, location,
+            status: 'pending', distanceFromCampus,
+            approvalReason, approvalNote: approvalNote || '',
+          });
+          return res.status(201).json(attendance);
+        }
+        // First call — no reason yet, tell frontend to open modal
+        return res.status(400).json({
+          message: 'You are outside the allowed location range',
+          distanceFromCampus,
+          requiresApproval: true,
+        });
       }
     }
 
     const attendance = await Attendance.create({
       userId: req.user._id, sessionId, method, location,
-      status, distanceFromCampus,
+      status: 'present', distanceFromCampus,
+      approvalReason: approvalReason || '',
+      approvalNote:   approvalNote   || '',
     });
-
-    if (status === 'pending') {
-      return res.status(201).json({
-        ...attendance.toObject(),
-        _message: 'You are outside campus. Attendance is pending faculty approval.',
-      });
-    }
 
     res.status(201).json(attendance);
   } catch (err) {
