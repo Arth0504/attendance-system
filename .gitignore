@@ -1,41 +1,5 @@
-# ── Dependencies ──────────────────────────────────────────────────────────────
-node_modules/
-.pnp
-.pnp.js
-
-# ── Environment secrets — NEVER commit ────────────────────────────────────────
+node_modules
 .env
-.env.local
-.env.development
-.env.production
-server/.env
-client/.env
-client/.env.local
-# client/.env.production is committed intentionally (public Render URL only)
-
-# ── Build output ──────────────────────────────────────────────────────────────
-dist/
-build/
-client/dist/
-client/build/
-
-# ── Uploaded files ────────────────────────────────────────────────────────────
-server/uploads/*
-!server/uploads/.gitkeep
-
-# ── Logs ──────────────────────────────────────────────────────────────────────
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-logs/
-
-# ── OS / Editor ───────────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+dist
+build
+uploads

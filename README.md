@@ -1,201 +1,108 @@
-# Attendance Management System
+# 🎓 AttendAI — AI-Based Attendance Management System
 
-A full-stack MERN application with **Face Recognition**, **GPS Verification**, and **QR Code** attendance marking — built for real-world classroom use.
-
----
-
-## Features
-
-| Feature | Description |
-|---|---|
-| 🎭 Face Recognition | face-api.js biometric verification on every attendance mark |
-| 📍 GPS Verification | Haversine formula, 100 m classroom radius check |
-| 🔲 QR Code | Cryptographically signed, auto-expires every 60 seconds |
-| 👨‍💼 Role-based Access | Admin · Faculty · Student with JWT authentication |
-| 📊 Analytics Dashboard | Attendance %, below-75% alerts, bar & pie charts |
-| 📁 CSV Student Upload | Bulk-add students via CSV; credentials auto-generated |
-| 📋 Attendance Requests | Students submit requests; faculty/admin approve or reject |
-| ☁️ MongoDB Atlas Ready | Works with local MongoDB or Atlas cloud cluster |
+Full-stack MERN app with Face Recognition, QR Code, and GPS attendance.
 
 ---
 
-## Tech Stack
-
-**Frontend**
-- React 18 (Vite)
-- Tailwind CSS
-- Axios
-- face-api.js
-- Recharts
-- react-hot-toast
-
-**Backend**
-- Node.js + Express.js
-- MongoDB + Mongoose
-- JWT Authentication
-- bcryptjs
-- multer + csv-parser
-- qrcode
-
-**Database**
-- MongoDB (local) or MongoDB Atlas (cloud)
-
----
-
-## Project Structure
+## 📁 Folder Structure
 
 ```
-├── client/                 # React Vite frontend
-│   └── src/
-│       ├── api/            # Axios instance
-│       ├── components/     # Layout, FaceCapture, QRScanner, etc.
-│       ├── context/        # AuthContext
-│       └── pages/
-│           ├── admin/      # Dashboard, Students, Faculty, Sessions, Analytics
-│           ├── faculty/    # Dashboard, Analytics
-│           └── student/    # Dashboard, MarkAttendance, History, Requests
-│
-└── server/                 # Express backend
-    └── src/
-        ├── controllers/    # auth, admin, faculty, attendance, session, face
-        ├── middleware/     # JWT auth, multer upload
-        ├── models/         # User, Session, Attendance, AttendanceRequest
-        ├── routes/         # All API routes
-        └── utils/          # GPS (Haversine), admin seeder
+AI BASED/
+├── client/          # React + Vite + Tailwind frontend
+├── server/          # Node.js + Express backend
+└── package.json     # Root convenience scripts
 ```
 
 ---
 
-## Prerequisites
+## ⚙️ Setup Instructions
 
-- Node.js 18+
-- MongoDB running locally **or** a MongoDB Atlas cluster
+### 1. Configure MongoDB Atlas
 
----
-
-## Setup & Run
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Arth0504/attendance-system.git
-cd attendance-system
-```
-
-### 2. Configure the backend
-
-```bash
-cd server
-cp .env.example .env
-```
-
-Edit `server/.env`:
+Edit `server/.env` and replace with your actual credentials:
 
 ```env
 PORT=5000
-
-# Local MongoDB
-MONGO_URI=mongodb://127.0.0.1:27017/attendance_db
-
-# OR MongoDB Atlas
-# MONGO_URI=mongodb+srv://<user>:<password>@cluster0.xxx.mongodb.net/attendance_db?retryWrites=true&w=majority
-
-JWT_SECRET=your_long_random_secret
-ADMIN_EMAIL=admin@yourdomain.com
-ADMIN_PASSWORD=Admin@123
-QR_SECRET=your_qr_secret
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/lbattend?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+NODE_ENV=development
 ```
 
-### 3. Install dependencies & start backend
+### 2. Install Dependencies
 
 ```bash
-# inside server/
-npm install
-npm run dev
+# From root
+cd server && npm install
+cd ../client && npm install
 ```
 
-Server starts on **http://localhost:5000**
+### 3. Run the Project
 
-### 4. Install dependencies & start frontend
+Open **two terminals**:
 
+**Terminal 1 — Backend:**
 ```bash
-cd ../client
-npm install
+cd server
 npm run dev
+# Server runs on http://localhost:5000
 ```
 
-Frontend starts on **http://localhost:5173**
-
----
-
-## Default Login
-
-| Role | Identifier | Password |
-|---|---|---|
-| Admin | `admin@attendance.com` | `Admin@123` |
-| Student | Roll No (e.g. `CS001`) | Roll No (e.g. `CS001`) |
-| Faculty | Email set by admin | Password set by admin |
-
-> Admin credentials are seeded automatically on first server start from `.env`.
-
----
-
-## CSV Format for Student Upload
-
-```csv
-name,email,rollNo
-John Doe,john@example.com,CS001
-Jane Smith,jane@example.com,CS002
+**Terminal 2 — Frontend:**
+```bash
+cd client
+npm run dev
+# App runs on http://localhost:5173
 ```
 
-Each student's username and initial password are set to their `rollNo`.
+---
+
+## 🔑 Default Roles
+
+Register an account and select your role:
+- **Admin** — Manage users, view all sessions & attendance
+- **Faculty** — Create sessions, generate QR codes, view attendance
+- **Student** — Mark attendance via QR, Face ID, or GPS
 
 ---
 
-## Attendance Flow (Student)
+## 🚀 Features
 
-1. **Scan QR** — faculty generates a 60-second QR code for the session
-2. **GPS Check** — student must be within 100 m of the classroom
-3. **Face Verify** — biometric match against registered face descriptor
-4. **Submit** — all three checks must pass to mark Present
+| Feature | Details |
+|---|---|
+| Auth | JWT login/register, role-based access |
+| QR Attendance | Dynamic QR per session, scanned by student |
+| Face Recognition | face-api.js with TinyFaceDetector |
+| GPS Verification | Browser geolocation + radius check |
+| Admin Dashboard | User CRUD, charts, all records |
+| Faculty Dashboard | Create sessions, view per-session attendance |
+| Student Dashboard | Mark attendance, analytics charts |
 
 ---
 
-## API Endpoints
+## 🌐 API Endpoints
 
-| Method | Route | Description |
+| Method | Route | Access |
 |---|---|---|
-| POST | `/api/auth/login` | Login (all roles) |
-| GET | `/api/auth/me` | Get current user |
-| POST | `/api/face/register` | Register face descriptor |
-| POST | `/api/face/verify` | Verify face during attendance |
-| POST | `/api/admin/upload-students` | Bulk CSV student upload |
-| POST | `/api/sessions` | Create session (faculty/admin) |
-| POST | `/api/sessions/:id/qr` | Generate QR for session |
-| POST | `/api/attendance/mark` | Mark attendance |
-| GET | `/api/admin/analytics` | Full analytics |
-| GET | `/health` | Server health check |
+| POST | `/api/auth/register` | Public |
+| POST | `/api/auth/login` | Public |
+| GET | `/api/auth/profile` | All |
+| PUT | `/api/auth/face-descriptor` | Student |
+| GET | `/api/sessions` | All |
+| POST | `/api/sessions` | Faculty/Admin |
+| PUT | `/api/sessions/:id/close` | Faculty/Admin |
+| GET | `/api/sessions/:id/attendance` | Faculty/Admin |
+| POST | `/api/attendance/mark` | Student |
+| GET | `/api/attendance/my` | Student |
+| GET | `/api/attendance/stats` | All |
+| GET | `/api/attendance/all` | Admin/Faculty |
+| GET | `/api/users` | Admin |
+| PUT | `/api/users/:id` | Admin |
+| DELETE | `/api/users/:id` | Admin |
 
 ---
 
-## Deployment
+## 🛠️ Tech Stack
 
-### Backend → Render
-
-1. Push to GitHub
-2. New Web Service → Root Dir: `server`
-3. Build: `npm install` · Start: `npm start`
-4. Add all env vars from `.env` in the Render dashboard
-5. Set `ALLOWED_ORIGINS` to your frontend URL
-
-### Frontend → Vercel
-
-1. New Project → Root Dir: `client`
-2. Add env var: `VITE_API_URL=https://your-render-app.onrender.com`
-3. Deploy — Vercel auto-detects Vite
-
----
-
-## License
-
-MIT
+- **Frontend:** React 19, Vite, Tailwind CSS v4, Recharts, face-api.js, html5-qrcode, qrcode.react
+- **Backend:** Node.js, Express, Mongoose, JWT, bcryptjs, qrcode, uuid
+- **Database:** MongoDB Atlas (`lbattend`)
