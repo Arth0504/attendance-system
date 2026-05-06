@@ -18,6 +18,7 @@ const TAB_LABELS = {
   face:       'Face ID',
   upload:     'Upload Photo',
   analytics:  'Analytics',
+  approvals:  'Pending Approvals',
 };
 
 const TAB_SUBTITLES = {
@@ -33,6 +34,7 @@ const TAB_SUBTITLES = {
   face:       'Mark attendance via face recognition',
   upload:     'Register your face photo',
   analytics:  'View your attendance analytics',
+  approvals:  'Review and approve pending attendance requests',
 };
 
 const Dashboard = () => {

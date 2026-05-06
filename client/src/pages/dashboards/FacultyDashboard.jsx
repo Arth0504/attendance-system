@@ -18,10 +18,30 @@ const FacultyDashboard = ({ activeTab }) => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionAttendance, setSessionAttendance] = useState([]);
   const [expandedQR, setExpandedQR]           = useState(null);
+  const [pending, setPending]                 = useState([]);
 
   useEffect(() => {
     api.get('/sessions').then(r => setSessions(r.data)).catch(() => {});
+    api.get('/attendance/pending').then(r => setPending(r.data)).catch(() => {});
   }, []);
+
+  const refreshPending = () => api.get('/attendance/pending').then(r => setPending(r.data)).catch(() => {});
+
+  const handleApprove = async (id) => {
+    try {
+      await api.put(`/attendance/pending/${id}/approve`);
+      toast.success('Attendance approved');
+      refreshPending();
+    } catch { toast.error('Failed to approve'); }
+  };
+
+  const handleReject = async (id) => {
+    try {
+      await api.put(`/attendance/pending/${id}/reject`);
+      toast.success('Attendance rejected');
+      refreshPending();
+    } catch { toast.error('Failed to reject'); }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -250,6 +270,51 @@ const FacultyDashboard = ({ activeTab }) => {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* APPROVALS TAB */}
+      {activeTab === 'approvals' && (
+        <div>
+          <SectionHeader title="Pending Approvals" subtitle={`${pending.length} requests awaiting review`} />
+          {pending.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+              <p className="text-gray-500 font-medium">No pending approvals</p>
+              <p className="text-gray-400 text-sm mt-1">All attendance requests have been reviewed</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pending.map(a => (
+                <div key={a._id} className="bg-white rounded-2xl shadow-sm border border-yellow-100 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-gray-800">{a.userId?.name}</p>
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">Pending</span>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {a.userId?.rollNumber && <span className="font-mono mr-2">#{a.userId.rollNumber}</span>}
+                        {a.sessionId?.subject} &middot; {a.sessionId?.department}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {a.distanceFromCampus != null && <span className="mr-2">📍 {a.distanceFromCampus}m from campus</span>}
+                        {new Date(a.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => handleApprove(a._id)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
+                        Approve
+                      </button>
+                      <button onClick={() => handleReject(a._id)}
+                        className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 transition">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
