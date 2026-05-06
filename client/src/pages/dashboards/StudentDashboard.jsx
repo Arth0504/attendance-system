@@ -139,6 +139,145 @@ const ApprovalModal = ({ data, onSubmit, onCancel }) => {
   );
 };
 
+// Requests Tab — standalone component that fetches its own data
+const RequestsTab = () => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    api.get('/attendance/my')
+      .then(r => {
+        // Show only records that were submitted as approval requests (have a reason)
+        // or are still pending
+        const reqs = r.data.filter(rec => rec.approvalReason || rec.status === 'pending');
+        setRequests(reqs);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statusConfig = {
+    pending:  { label: 'Pending',  cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+    present:  { label: 'Approved', cls: 'bg-green-100  text-green-700  border-green-200'  },
+    absent:   { label: 'Rejected', cls: 'bg-red-100    text-red-600    border-red-200'    },
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader title="My Requests" subtitle="Track your attendance approval requests" />
+
+      {requests.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <p className="font-semibold text-gray-600">No requests submitted yet</p>
+          <p className="text-sm text-gray-400 mt-1">Approval requests appear here when you are outside campus</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {requests.map(r => {
+            const cfg = statusConfig[r.status] || statusConfig.pending;
+            return (
+              <div
+                key={r._id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  {/* Status badge — left accent */}
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold border ${cfg.cls}`}>
+                      {r.status === 'pending' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1.5 animate-pulse" />
+                      )}
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-800">{r.sessionId?.subject || 'Unknown Subject'}</p>
+                      <span className="text-xs text-gray-400">{r.sessionId?.department}</span>
+                    </div>
+
+                    {/* Reason */}
+                    {r.approvalReason && (
+                      <div className="flex items-start gap-1.5 mb-1">
+                        <span className="text-xs font-semibold text-gray-500 mt-0.5 flex-shrink-0">Reason:</span>
+                        <span className="text-xs text-gray-700">{r.approvalReason}</span>
+                      </div>
+                    )}
+
+                    {/* Note */}
+                    {r.approvalNote && (
+                      <div className="flex items-start gap-1.5 mb-1">
+                        <span className="text-xs font-semibold text-gray-500 mt-0.5 flex-shrink-0">Note:</span>
+                        <span className="text-xs text-gray-500 italic">{r.approvalNote}</span>
+                      </div>
+                    )}
+
+                    {/* Distance + date */}
+                    <div className="flex flex-wrap gap-3 mt-1.5">
+                      {r.distanceFromCampus != null && (
+                        <span className="text-xs text-gray-400">
+                          📍 {r.distanceFromCampus}m from campus
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">
+                        🕐 {new Date(r.timestamp).toLocaleString()}
+                      </span>
+                      <span className="text-xs text-gray-400 capitalize">
+                        via {r.method}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Faculty decision banner */}
+                {r.status === 'present' && (
+                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+                    </svg>
+                    <p className="text-xs text-green-700 font-medium">Faculty approved your attendance request</p>
+                  </div>
+                )}
+                {r.status === 'absent' && (
+                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                    <p className="text-xs text-red-600 font-medium">Faculty rejected your attendance request</p>
+                  </div>
+                )}
+                {r.status === 'pending' && (
+                  <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <p className="text-xs text-yellow-700 font-medium">Awaiting faculty review</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const StudentDashboard = ({ activeTab }) => {
   const { user } = useAuth();
   const [records, setRecords]       = useState([]);
@@ -490,6 +629,11 @@ const StudentDashboard = ({ activeTab }) => {
             )}
           </div>
         </div>
+      )}
+
+      {/* REQUESTS TAB */}
+      {activeTab === 'requests' && (
+        <RequestsTab />
       )}
 
       {/* ANALYTICS TAB */}

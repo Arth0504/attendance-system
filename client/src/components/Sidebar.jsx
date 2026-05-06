@@ -35,11 +35,12 @@ const NAV = {
     { key: 'approvals',  icon: Icons.approve,     label: 'Approvals' },
   ],
   student: [
-    { key: 'records',    icon: Icons.records,     label: 'My Records' },
-    { key: 'qr',         icon: Icons.qr,          label: 'QR Scan' },
-    { key: 'face',       icon: Icons.face,        label: 'Face ID' },
-    { key: 'upload',     icon: Icons.upload,      label: 'Upload Photo' },
-    { key: 'analytics',  icon: Icons.analytics,   label: 'Analytics' },
+    { key: 'records',   icon: Icons.records,   label: 'My Records' },
+    { key: 'qr',        icon: Icons.qr,        label: 'QR Scan' },
+    { key: 'face',      icon: Icons.face,      label: 'Face ID' },
+    { key: 'upload',    icon: Icons.upload,    label: 'Upload Photo' },
+    { key: 'requests',  icon: Icons.requests,  label: 'Requests' },
+    { key: 'analytics', icon: Icons.analytics, label: 'Analytics' },
   ],
 };
 
