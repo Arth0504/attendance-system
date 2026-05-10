@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const app = express();
 
+<<<<<<< HEAD
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -28,6 +29,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.options('*', cors());
+=======
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://attendance-system-rosy-six.vercel.app',
+  ],
+  credentials: true,
+}));
+>>>>>>> f189c11bf04c4deab4119623ee19d79b2934894f
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', require('express').static('uploads'));
 
